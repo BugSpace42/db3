@@ -1,0 +1,32 @@
+CREATE TABLE populated_forest (
+	id SERIAL PRIMARY KEY,
+	time TIMESTAMP,
+	forest_id INT NOT NULL,
+	number_of_creatures positive_integer
+);
+
+CREATE FUNCTION count_creatures_in_forests()
+RETURNS trigger AS
+$$
+    DECLARE forest INT;
+    		number INT;
+    BEGIN
+		SELECT forest_id, COUNT(*) AS number
+		INTO forest, number
+		FROM creature_location
+		GROUP BY forest_id
+    	ORDER BY number DESC
+    	LIMIT 1;
+
+        INSERT INTO populated_forest (time, forest_id, number_of_creatures)
+        VALUES (NOW(), forest, number);
+
+        RETURN NEW;
+    END;
+$$
+LANGUAGE plpgsql;
+
+CREATE TRIGGER update_populated_forest
+AFTER INSERT OR UPDATE OR DELETE ON creature_location
+FOR EACH STATEMENT
+EXECUTE FUNCTION count_creatures_in_forests();
